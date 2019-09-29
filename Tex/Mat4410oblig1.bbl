@@ -1,0 +1,19 @@
+\begin{thebibliography}{1}
+
+\bibitem{Ascher}
+Uri~M. Ascher and Chen Greif.
+\newblock Linear least squares problems.
+\newblock In {\em A First Course on Numerical Methods}, pages 141--166. Society
+  for Industrial and Applied Mathematics, 2011.
+
+\bibitem{MF3}
+Michael~S. Floater.
+\newblock Lecture 3: Cholesky and qr.
+\newblock Department of Mathematics, University of Oslo, September 19 2017.
+
+\bibitem{MF4}
+Michael~S. Floater.
+\newblock Lecture 4, gram-schmidt, qr solution to least squares.
+\newblock Department of Mathematics, University of Oslo, September 4 2017.
+
+\end{thebibliography}

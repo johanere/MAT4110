@@ -29,10 +29,16 @@ def MSE(z1, z2):
 
 
 class Data:
-    def __init__(self, p=5,eps=1):
+    def __init__(self,eps=1):
         """Initiates class. Provide degree of polynomial, p"""
-        self.p = p
         self.eps=eps
+
+    def GenerateTestPol(self):
+        n=30
+        x=np.linspace(-2,2,n)
+        self.y=3+x+4*x**4+2*x**3
+        self.n=n
+        self.x=x
 
     def GenerateData_1(self):
         """Generates a random NxN-grid and computes targets [with noise] from Franke Function. Provide N and noise [true]/false"""
@@ -57,8 +63,9 @@ class Data:
         self.y = 4*x**5- 5*x**4 - 20*x**3 + 10*x**2 + 40*x + 10 + r
         self.n=n
 
-    def CreateDesignMatrix(self):
+    def CreateDesignMatrix(self,p):
         """  Sets up design matrix X. Splits X in training and test data"""
+        self.p=p
         x = self.x
         y = self.y
         X = np.ones((self.n, self.p))
@@ -67,10 +74,16 @@ class Data:
         self.X = X
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, self.y, test_size=0.2)
 
-    def QRsolve(self):
+    def QRsolve(self): #FIX FOR QR SOLVINGS
+        print("X",np.shape(self.X))
         q,r=np.linalg.qr(self.X)
+        print("R",np.shape(r))
+        print("q",np.shape(q))
         qt=np.dot(q.T,self.y)
+        print("Qt",np.shape(qt))
         p=self.p
+        """"
+        ----"""
         self.beta=np.zeros(self.p)
         self.beta[p-1]=qt[self.p-1]/r[p-1,p-1]
         for i in range(self.p-2,-1,-1):
@@ -79,7 +92,40 @@ class Data:
                 sum+=r[i,j]*self.beta[j]
             self.beta[i]=(qt[i]-sum)/r[i,i]
         self.ypred=np.dot(self.X, self.beta)
-        print(self.beta)
+
+
+    def Choleskysolve(self): #OK!
+        A=np.dot(self.X.T,self.X)
+        n=len(A)
+        if np.linalg.det(A)<1e-10:
+            exit("Program terminated.  det(A)=0 in Cholenskysolve")
+        L=np.zeros((n,n))
+        D=np.zeros((n,n))
+        for i in range(n):
+            L[:,i]=A[:,i]
+            L[:,i]=L[:,i]/float(L[i,i])
+            D[i,i]=A[i,i]
+            A=A-D[i,i]*np.outer(L[:,i],L[:,i].T)
+        R=np.matmul(L,np.sqrt(D))
+        """Rw=A.Tb by forward sub"""
+        w=np.zeros(n)
+        y=np.dot(self.X.T,self.y)
+        w[0]=y[0]/R[0,0]
+        for i in range(1,n):
+            sum=0
+            for j in range(0,i):
+                sum+=R[i,j]*w[j]
+            w[i]=(y[i]-sum)/R[i,i]
+        """R.Tx=w by backward sub"""
+        RT=R.T
+        self.beta=np.zeros(n)
+        self.beta[n-1]=w[n-1]/RT[n-1,n-1]
+        for i in range(n-2,-1,-1):
+            sum=0
+            for j in range(i+1,n):
+                sum+=RT[i,j]*self.beta[j]
+            self.beta[i]=(w[i]-sum)/RT[i,i]
+        self.ypred=np.dot(self.X, self.beta)
 
     def OLS(self):
         """Stores a beta vector using OLS on currently set training data"""
@@ -114,7 +160,7 @@ class Data:
         if self.n > 4:
             self.r2_test = r2(self.z_test, self.z_test_predict)
 
-    def Skl_OLS(self, k=4):
+    def Skl_OLS(self, k=2):
         clf = skl.LinearRegression().fit(self.X, self.y)
         self.ytilde = clf.predict(self.X)
 
@@ -147,14 +193,41 @@ class Data:
             self.kscores[1, j] = self.r2_test
             j += 1
 
+fig=plt.figure()
+ax1=fig.add_subplot(221)
+ax2=fig.add_subplot(222)
+ax3=fig.add_subplot(223)
+ax4=fig.add_subplot(224)
 
-np.random.seed(3)
-data=Data(p=5,eps=0)
+def addsubplot(p,ax):
+    data.CreateDesignMatrix(p)
+    data.Choleskysolve()
+    ax.plot(data.x,data.ypred,"r--")
+    data.QRsolve()
+    ax.plot(data.x,data.ypred,"g--")
+    ax.scatter(data.x,data.y,color='xkcd:lightish blue',alpha=0.5, s=30)
+
+
+
+data=Data(0.7)
 data.GenerateData_1()
-data.CreateDesignMatrix()
-data.QRsolve()
-data.Skl_OLS()
-plt.scatter(data.x,data.y)
-plt.plot(data.x,data.ytilde)
-plt.plot(data.x,data.ypred)
-plt.show()
+addsubplot(3,ax1)
+addsubplot(8,ax2)
+data.GenerateData_2()
+addsubplot(3,ax3)
+addsubplot(8,ax4)
+line_labels = ["QR", "CH"]
+fig.legend([ax1,ax2],     # The line objects
+           labels=line_labels,   # The labels for each line
+           loc="center right",   # Position of legend
+           borderaxespad=0.1,    # Small spacing around legend box
+           title="Method"  # Title for the legend
+           )
+plt.subplots_adjust(right=0.8)
+plt.savefig("..\Tex\Figures\methods.pdf", bbox_inches='tight')
+
+
+n=30000
+m=10
+print(m*n**2+(1/3.0)*n**2)
+print(2*m*n**2-(2/3.0)*n**2)
